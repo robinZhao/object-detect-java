@@ -104,7 +104,7 @@ class DetectImgJdk implements DetectImg {
 			int destH = (int) Math.round(image.getHeight() * r);
 			this.resizedImage=new BufferedImage(destW, destH, BufferedImage.TYPE_INT_RGB);
 			Graphics g = resizedImage.createGraphics();
-			g.drawImage(image.getScaledInstance(destW, destH, Image.SCALE_DEFAULT), 0, 0, null);
+			g.drawImage(image, 0, 0,destW,destH, null);
 			g.dispose();
 		} else {
 			this.resizedImage = image;
