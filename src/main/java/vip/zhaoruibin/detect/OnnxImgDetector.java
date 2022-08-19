@@ -28,122 +28,11 @@ import ai.onnxruntime.OrtSession.SessionOptions.OptLevel;
 import ai.onnxruntime.TensorInfo;
 
 public class OnnxImgDetector implements AutoCloseable {
-	private static String[] hexs = new String[] { "FF3838", "FF9D97", "FF701F", "FFB21D", "CFD231", "48F90A", "92CC17",
-			"3DDB86", "1A9334", "00D4BB", "2C99A8", "00C2FF", "344593", "6473FF", "0018EC", "8438FF", "520085",
-			"CB38FF", "FF95C8", "FF37C7" };
-	private static Scalar[] colors;
-	static {
-		String path = "D:\\tools\\opencv\\build\\java\\x64\\opencv_java460.dll";
-		System.load(path);
-		colors = new Scalar[hexs.length];
-		for (int i = 0; i < hexs.length; i++) {
-			int r = Integer.parseInt(hexs[i].substring(0, 2), 16);
-			int g = Integer.parseInt(hexs[i].substring(2, 4), 16);
-			int b = Integer.parseInt(hexs[i].substring(4, 6), 16);
-			colors[i] = new Scalar(b, g, r);
-		}
-	}
+	
 
-	public static class Bbox {
-		String cls;
-		int clsId;
-		Float score;
-		float x1;
-		float y1;
-		float x2;
-		float y2;
 
-		public Bbox(int clsId, String cls, Float score, float x1, float y1, float x2, float y2) {
-			super();
-			this.clsId = clsId;
-			this.cls = cls;
-			this.score = score;
-			this.x1 = x1;
-			this.y1 = y1;
-			this.x2 = x2;
-			this.y2 = y2;
-		}
-	}
 
-	public static class DetectImg {
-		private Mat image;
-		Mat img_rgb;
-		private float[][][] inputArr;
-		private Integer leftMargin;
-		private Integer topMargin;
-		private List<Bbox> boxes;
-		private double r;
-		private long size;
 
-		DetectImg(Mat image, long size, boolean auto) {
-			this.image = image;
-			this.size = size;
-			this.initInputArr(auto);
-		}
-
-		private void initInputArr(boolean auto) {
-			double tmpR = ((double) size) / Math.max(image.width(), image.height());
-			this.r = (!auto && tmpR > 1) ? 1 : tmpR;
-			Mat img_rgb = new Mat();
-			Mat img_resize = new Mat();
-			this.img_rgb = img_rgb;
-			if (r < 1 || (r > 1 && auto)) {
-				Size destSize = new Size(Math.round(image.width() * r), Math.round(image.height() * r));
-				Imgproc.resize(image, img_resize, destSize, r > 1 ? Imgproc.INTER_LINEAR : Imgproc.INTER_AREA);
-			} else {
-				img_resize = image;
-			}
-			Imgproc.cvtColor(img_resize, img_rgb, Imgproc.COLOR_BGR2RGB);
-			this.leftMargin = (int) (size - img_resize.width()) / 2;
-			this.topMargin = (int) (size - img_resize.height()) / 2;
-
-			float[][][] arr = new float[3][(int) size][(int) size];
-			for (int i = 0; i < size; i++) {
-				for (int j = 0; j < size; j++) {
-					if (i >= topMargin && j >= leftMargin && i < topMargin + (int) img_resize.height()
-							&& j < leftMargin + (int) img_resize.width()) {
-						for (int k = 0; k < 3; k++) {
-							arr[k][i][j] = (float) (img_rgb.get(i - topMargin, j - leftMargin)[k] / 255.0);
-						}
-					} else {
-						arr[0][i][j] = 114.0f / 255;
-						arr[1][i][j] = 114.0f / 255;
-						arr[2][i][j] = 114.0f / 255;
-					}
-				}
-			}
-			this.inputArr = arr;
-		}
-
-		public float[][][] getInputArr() {
-			return inputArr;
-		}
-
-		private void unPadingAndunZoom(List<Bbox> boxes) {
-			boxes.forEach(it -> {
-				it.x1 = (float) ((it.x1 - this.leftMargin) / r);
-				it.y1 = (float) ((it.y1 - this.topMargin) / r);
-				it.x2 = (float) ((it.x2 - this.leftMargin) / r);
-				it.y2 = (float) ((it.y2 - this.topMargin) / r);
-			});
-		}
-
-		public List<Bbox> getBoxes() {
-			return boxes;
-		}
-
-		public void setBoxes(List<Bbox> boxes) {
-			unPadingAndunZoom(boxes);
-			this.boxes = boxes;
-		}
-
-		public void drawBoxes(String outPath) {
-			this.boxes.forEach(it -> {
-				draw(this.image, it);
-			});
-			Imgcodecs.imwrite(outPath, this.image);
-		}
-	}
 
 	public static Object[] max(float[] numberArray, int offset) {
 		float max = numberArray[offset];
@@ -173,26 +62,7 @@ public class OnnxImgDetector implements AutoCloseable {
 		return inter / ((box1.x2 - box1.x1) * (box1.y2 - box1.y1) + (box2.x2 - box2.x1) * (box2.y2 - box2.y1) - inter);
 	}
 
-	public static void draw(Mat img, Bbox box) {
-		Scalar borderColor = colors[box.clsId % colors.length];
-		float x1 = box.x1;
-		float y1 = box.y1;
-		float width = (box.cls.length() + 5) * 11;
-		if (x1 < 0) {
-			x1 = x1 + (0 - x1);
-		}
-		if (y1 < 18) {
-			y1 = y1 + (18 - y1);
-		}
-		if (x1 >= (img.width() - width)) {
-			x1 = x1 - (img.width() - width);
-		}
-		Imgproc.rectangle(img, new Point(box.x1, box.y1), new Point(box.x2, box.y2), borderColor, 2);
-		Imgproc.rectangle(img, new Point(x1, y1 - 18), new Point(x1 + (box.cls.length() + 5) * 11, y1), borderColor,
-				-1);
-		Imgproc.putText(img, box.cls + " " + String.format("%.2f", box.score), new Point(x1, y1 - 2),
-				Imgproc.FONT_HERSHEY_SIMPLEX, 0.6, new Scalar(255, 255, 255), 2);
-	}
+	
 
 	private String[] models;
 	private Integer stride;
@@ -214,12 +84,22 @@ public class OnnxImgDetector implements AutoCloseable {
 		this(0.25f, 0.45f);
 	}
 
-	public DetectImg loadImg(String imgPath, boolean auto) {
-		return new DetectImg(Imgcodecs.imread(imgPath), this.imageSize, auto);
+	public <T extends DetectImg>  T loadImg(Class<T> dectImgImplClass,String imgPath, boolean auto) {
+		DetectImg img;
+		try {
+			img = dectImgImplClass.newInstance();
+			img.load(imgPath, imageSize, auto);
+			return (T)img;
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException("Load Image failure",e);
+		} catch (InstantiationException e) {
+			throw new RuntimeException("Load Image failure",e);
+		}
+		
 	}
 
-	public DetectImg loadImg(String imgPath) {
-		return loadImg(imgPath, true);
+	public <T extends DetectImg>  T loadImg(Class<T> dectImgImplClass,String imgPath) {
+		return loadImg(dectImgImplClass,imgPath, true);
 	}
 
 	public void detect(DetectImg dectImg, float conf_threshold, float iou_threshold) throws OrtException {
@@ -227,10 +107,6 @@ public class OnnxImgDetector implements AutoCloseable {
 				Result output = session.run(Collections.singletonMap(inputName, inputTensor))) {
 			OnnxTensor outputTensor = (OnnxTensor) output.get(0);
 			List<Bbox> boxs = postProcess(outputTensor, conf_threshold, iou_threshold);
-			boxs.forEach(it -> {
-				draw(dectImg.img_rgb, it);
-			});
-			Imgcodecs.imwrite("out1.jpg", dectImg.img_rgb);
 			dectImg.setBoxes(boxs);
 		}
 	}
@@ -239,19 +115,19 @@ public class OnnxImgDetector implements AutoCloseable {
 		this.detect(dectImg, this.conf_threshold, this.iou_threshold);
 	}
 
-	public List<Bbox> detect(String imgPath, float conf_threshold, float iou_threshold) {
-		DetectImg img = loadImg(imgPath);
-		try {
-			this.detect(img, conf_threshold, iou_threshold);
-			return img.boxes;
-		} catch (OrtException e) {
-			throw new RuntimeException("detect failure", e);
-		}
-	}
+//	public List<Bbox> detect(String imgPath, float conf_threshold, float iou_threshold) {
+//		DetectImg img = loadImg(imgPath);
+//		try {
+//			this.detect(img, conf_threshold, iou_threshold);
+//			return img.boxes;
+//		} catch (OrtException e) {
+//			throw new RuntimeException("detect failure", e);
+//		}
+//	}
 
-	public List<Bbox> detect(String imgPath) {
-		return this.detect(imgPath, this.conf_threshold, this.iou_threshold);
-	}
+//	public List<Bbox> detect(String imgPath) {
+//		return this.detect(imgPath, this.conf_threshold, this.iou_threshold);
+//	}
 
 	public List<Bbox> postProcess(OnnxTensor output, float conf_threshold, float iou_threshold) throws OrtException {
 		AtomicInteger idx = new AtomicInteger(0);

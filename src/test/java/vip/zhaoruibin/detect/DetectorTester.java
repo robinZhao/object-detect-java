@@ -11,14 +11,13 @@ public class DetectorTester {
 	@Test
 	public void testDetect() throws OrtException {
 		OnnxImgDetector dector = new OnnxImgDetector();
-		dector.loadOnnx("weights/yolov5s.onnx");
+		dector.loadOnnx("weights/lgt.onnx");
 		File dir = new File("data/img");
 		Arrays.stream(dir.listFiles()).forEach(it->{
-			OnnxImgDetector.DetectImg img = dector.loadImg(it.getAbsolutePath());
+			DetectImg img = dector.loadImg(DetectImgJdk.class,it.getAbsolutePath());
 			try {
 				dector.detect(img);
 			} catch (OrtException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			img.drawBoxes("data/output/"+it.getName());
