@@ -12,10 +12,12 @@ public interface DetectImg {
 
 	List<Bbox> getBoxes();
 
-	void setBoxes(List<Bbox> boxes);
-
 	void drawBoxes(String outPath);
 	
 	void load(String imgPath, long size, boolean auto);
+
+	void drawOutputBoxes(String string);
+
+	void setBoxesOutput(List<Bbox> boxesOutput); 
 
 }

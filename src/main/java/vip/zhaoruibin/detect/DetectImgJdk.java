@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +15,12 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 
-class DetectImgJdk implements DetectImg {
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+
+class DetectImgJdk extends AbstractDetectImg {
 
 	private static Color[] colors;
 	static {
@@ -31,12 +35,7 @@ class DetectImgJdk implements DetectImg {
 
 	private BufferedImage image;
 	BufferedImage resizedImage;
-	private float[][][] inputArr;
-	private Integer leftMargin;
-	private Integer topMargin;
-	private List<Bbox> boxes;
-	private double r;
-	private long size;
+
 	private String imgPath;
 	private String imgFormat;
 
@@ -51,16 +50,16 @@ class DetectImgJdk implements DetectImg {
 	public void load(String imgPath, long size, boolean auto) {
 		this.imgPath = imgPath;
 		try {
-			
+
 			ImageInputStream s = ImageIO.createImageInputStream(new File(imgPath));
-            Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(s);
-            while(imageReaders.hasNext()){
-                ImageReader next = imageReaders.next();
-                this.imgFormat = next.getFormatName();
-                next.dispose();
-                break;
-            }
-            this.image = ImageIO.read(s);
+			Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(s);
+			while (imageReaders.hasNext()) {
+				ImageReader next = imageReaders.next();
+				this.imgFormat = next.getFormatName();
+				next.dispose();
+				break;
+			}
+			this.image = ImageIO.read(s);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			throw new RuntimeException("read image failure", e);
@@ -89,7 +88,7 @@ class DetectImgJdk implements DetectImg {
 		g.drawRect((int) box.x1, (int) box.y1, (int) (box.x2 - box.x1), (int) (box.y2 - box.y1));
 		g.fillRect((int) box.x1, (int) box.y1 - 18, (box.cls.length() + 5) * 11, 18);
 		g.setColor(Color.WHITE);
-		Font f = new Font(g.getFont().getFamily(),Font.BOLD,13);
+		Font f = new Font(g.getFont().getFamily(), Font.BOLD, 13);
 		g.setFont(f);
 		g.drawString(box.cls + " " + String.format("%.2f", box.score), (int) x1, (int) y1 - 2);
 		g.dispose();
@@ -102,9 +101,9 @@ class DetectImgJdk implements DetectImg {
 		if (r < 1 || (r > 1 && auto)) {
 			int destW = (int) Math.round(image.getWidth() * r);
 			int destH = (int) Math.round(image.getHeight() * r);
-			this.resizedImage=new BufferedImage(destW, destH, BufferedImage.TYPE_INT_RGB);
+			this.resizedImage = new BufferedImage(destW, destH, BufferedImage.TYPE_INT_RGB);
 			Graphics g = resizedImage.createGraphics();
-			g.drawImage(image, 0, 0,destW,destH, null);
+			g.drawImage(image, 0, 0, destW, destH, null);
 			g.dispose();
 		} else {
 			this.resizedImage = image;
@@ -119,11 +118,11 @@ class DetectImgJdk implements DetectImg {
 			for (int j = 0; j < size; j++) {
 				if (i >= topMargin && j >= leftMargin && i < topMargin + (int) resizedHeight
 						&& j < leftMargin + (int) resizedWidth) {
-					int rgb = resizedImage.getRGB( j - leftMargin,i - topMargin);
-					Color color = new Color(rgb,true);
-					arr[0][i][j]=color.getRed()/255.0f;
-					arr[1][i][j]=color.getGreen()/255.0f;
-					arr[2][i][j]=color.getBlue()/255.0f;
+					int rgb = resizedImage.getRGB(j - leftMargin, i - topMargin);
+					Color color = new Color(rgb, true);
+					arr[0][i][j] = color.getRed() / 255.0f;
+					arr[1][i][j] = color.getGreen() / 255.0f;
+					arr[2][i][j] = color.getBlue() / 255.0f;
 				} else {
 					arr[0][i][j] = 114.0f / 255;
 					arr[1][i][j] = 114.0f / 255;
@@ -132,32 +131,11 @@ class DetectImgJdk implements DetectImg {
 			}
 		}
 		this.inputArr = arr;
-	}
 
-	public float[][][] getInputArr() {
-		return inputArr;
-	}
-
-	private void unPadingAndunZoom(List<Bbox> boxes) {
-		boxes.forEach(it -> {
-			it.x1 = (float) ((it.x1 - this.leftMargin) / r);
-			it.y1 = (float) ((it.y1 - this.topMargin) / r);
-			it.x2 = (float) ((it.x2 - this.leftMargin) / r);
-			it.y2 = (float) ((it.y2 - this.topMargin) / r);
-		});
-	}
-
-	public List<Bbox> getBoxes() {
-		return boxes;
-	}
-
-	public void setBoxes(List<Bbox> boxes) {
-		unPadingAndunZoom(boxes);
-		this.boxes = boxes;
 	}
 
 	public void drawBoxes(String outPath) {
-		BufferedImage copy=new BufferedImage(image.getWidth(),image.getHeight(), BufferedImage.TYPE_INT_RGB);
+		BufferedImage copy = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
 		Graphics g = copy.createGraphics();
 		g.drawImage(image, 0, 0, null);
 		g.dispose();
@@ -167,7 +145,31 @@ class DetectImgJdk implements DetectImg {
 		try {
 			ImageIO.write(copy, this.imgFormat, new File(outPath));
 		} catch (IOException e) {
-			throw new RuntimeException("write image failure",e);
+			throw new RuntimeException("write image failure", e);
+		}
+	}
+
+	@Override
+	public void drawOutputBoxes(String outPath) {
+		if (this.inputArr.length == 0) {
+			throw new RuntimeException("no input arr data,can't draw output box");
+		}
+		BufferedImage img = new BufferedImage((int) size, (int) size, BufferedImage.TYPE_INT_RGB);
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < size; j++) {
+				Color c = new Color((int)(inputArr[0][i][j]*255),(int)(inputArr[1][i][j] * 255),(int)(inputArr[2][i][j] * 255));
+				for (int k = 0; k < 3; k++) {
+					img.setRGB(j,i, c.getRGB());
+				}
+			}
+		}
+		this.boxesOutput.forEach(it -> {
+			draw(img, it);
+		});
+		try {
+			ImageIO.write(img, this.imgFormat, new File(outPath));
+		} catch (IOException e) {
+			throw new RuntimeException("draw output box failure", e);
 		}
 	}
 }

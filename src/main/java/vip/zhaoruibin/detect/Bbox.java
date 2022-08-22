@@ -1,5 +1,5 @@
 package vip.zhaoruibin.detect;
-public class Bbox {
+public class Bbox implements Cloneable{
 		String cls;
 		int clsId;
 		Float score;
@@ -7,6 +7,8 @@ public class Bbox {
 		float y1;
 		float x2;
 		float y2;
+		
+		
 
 		public Bbox(int clsId, String cls, Float score, float x1, float y1, float x2, float y2) {
 			super();
@@ -18,4 +20,9 @@ public class Bbox {
 			this.x2 = x2;
 			this.y2 = y2;
 		}
+		
+		public Object clone() throws CloneNotSupportedException {
+			return super.clone();
+		}
+	
 	}

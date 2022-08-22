@@ -28,11 +28,6 @@ import ai.onnxruntime.OrtSession.SessionOptions.OptLevel;
 import ai.onnxruntime.TensorInfo;
 
 public class OnnxImgDetector implements AutoCloseable {
-	
-
-
-
-
 
 	public static Object[] max(float[] numberArray, int offset) {
 		float max = numberArray[offset];
@@ -62,8 +57,6 @@ public class OnnxImgDetector implements AutoCloseable {
 		return inter / ((box1.x2 - box1.x1) * (box1.y2 - box1.y1) + (box2.x2 - box2.x1) * (box2.y2 - box2.y1) - inter);
 	}
 
-	
-
 	private String[] models;
 	private Integer stride;
 	private OrtEnvironment env;
@@ -84,22 +77,22 @@ public class OnnxImgDetector implements AutoCloseable {
 		this(0.25f, 0.45f);
 	}
 
-	public <T extends DetectImg>  T loadImg(Class<T> dectImgImplClass,String imgPath, boolean auto) {
+	public <T extends DetectImg> T loadImg(Class<T> dectImgImplClass, String imgPath, boolean auto) {
 		DetectImg img;
 		try {
 			img = dectImgImplClass.newInstance();
 			img.load(imgPath, imageSize, auto);
-			return (T)img;
+			return (T) img;
 		} catch (IllegalAccessException e) {
-			throw new RuntimeException("Load Image failure",e);
+			throw new RuntimeException("Load Image failure", e);
 		} catch (InstantiationException e) {
-			throw new RuntimeException("Load Image failure",e);
+			throw new RuntimeException("Load Image failure", e);
 		}
-		
+
 	}
 
-	public <T extends DetectImg>  T loadImg(Class<T> dectImgImplClass,String imgPath) {
-		return loadImg(dectImgImplClass,imgPath, true);
+	public <T extends DetectImg> T loadImg(Class<T> dectImgImplClass, String imgPath) {
+		return loadImg(dectImgImplClass, imgPath, true);
 	}
 
 	public void detect(DetectImg dectImg, float conf_threshold, float iou_threshold) throws OrtException {
@@ -107,7 +100,7 @@ public class OnnxImgDetector implements AutoCloseable {
 				Result output = session.run(Collections.singletonMap(inputName, inputTensor))) {
 			OnnxTensor outputTensor = (OnnxTensor) output.get(0);
 			List<Bbox> boxs = postProcess(outputTensor, conf_threshold, iou_threshold);
-			dectImg.setBoxes(boxs);
+			dectImg.setBoxesOutput(boxs);
 		}
 	}
 
@@ -115,19 +108,20 @@ public class OnnxImgDetector implements AutoCloseable {
 		this.detect(dectImg, this.conf_threshold, this.iou_threshold);
 	}
 
-//	public List<Bbox> detect(String imgPath, float conf_threshold, float iou_threshold) {
-//		DetectImg img = loadImg(imgPath);
-//		try {
-//			this.detect(img, conf_threshold, iou_threshold);
-//			return img.boxes;
-//		} catch (OrtException e) {
-//			throw new RuntimeException("detect failure", e);
-//		}
-//	}
+	public <T extends DetectImg> List<Bbox> detect(Class<T> dectImgImplClass, String imgPath, float conf_threshold,
+			float iou_threshold) {
+		DetectImg img = loadImg(dectImgImplClass, imgPath);
+		try {
+			this.detect(img, conf_threshold, iou_threshold);
+			return img.getBoxes();
+		} catch (OrtException e) {
+			throw new RuntimeException("detect failure", e);
+		}
+	}
 
-//	public List<Bbox> detect(String imgPath) {
-//		return this.detect(imgPath, this.conf_threshold, this.iou_threshold);
-//	}
+	public <T extends DetectImg> List<Bbox> detect(Class<T> dectImgImplClass, String imgPath) {
+		return this.detect(dectImgImplClass, imgPath, this.conf_threshold, this.iou_threshold);
+	}
 
 	public List<Bbox> postProcess(OnnxTensor output, float conf_threshold, float iou_threshold) throws OrtException {
 		AtomicInteger idx = new AtomicInteger(0);
