@@ -1,11 +1,7 @@
 package vip.zhaoruibin.detect;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.List;
-
+import org.bytedeco.javacpp.Loader;
+import org.bytedeco.opencv.opencv_java;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -15,11 +11,10 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 class DetectImgOpenCv extends AbstractDetectImg {
-
+	
 	private static Scalar[] colors;
 	static {
-		String path = "D:\\tools\\opencv\\build\\java\\x64\\opencv_java460.dll";
-		System.load(path);
+		Loader.load(opencv_java.class);
 		colors = new Scalar[hexs.length];
 		for (int i = 0; i < hexs.length; i++) {
 			int r = Integer.parseInt(hexs[i].substring(0, 2), 16);

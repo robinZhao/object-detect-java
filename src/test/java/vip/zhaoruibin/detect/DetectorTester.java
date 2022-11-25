@@ -11,12 +11,12 @@ public class DetectorTester {
 	@Test
 	public void testDetect() throws OrtException {
 		OnnxImgDetector dector = new OnnxImgDetector();
-		dector.loadOnnx("weights/lgt.onnx");
+		dector.loadOnnx("weights/yolov5s.onnx");
 		File dir = new File("data/img");
 		Arrays.stream(dir.listFiles()).forEach(it->{
 			DetectImg img = dector.loadImg(DetectImgJdk.class,it.getAbsolutePath());
 			try {
-				dector.detect(img,0.25f,0.45f);
+				dector.detect(img,0.5f,0.45f);
 			} catch (OrtException e) {
 				e.printStackTrace();
 			}
@@ -32,12 +32,12 @@ public class DetectorTester {
 	@Test
 	public void testDetectOpencv() throws OrtException {
 		OnnxImgDetector dector = new OnnxImgDetector();
-		dector.loadOnnx("weights/lgt.onnx");
+		dector.loadOnnx("weights/yolov5s.onnx");
 		File dir = new File("data/img");
 		Arrays.stream(dir.listFiles()).forEach(it->{
 			DetectImg img = dector.loadImg(DetectImgOpenCv.class,it.getAbsolutePath());
 			try {
-				dector.detect(img,0.25f,0.45f);
+				dector.detect(img,0.5f,0.45f);
 			} catch (OrtException e) {
 				e.printStackTrace();
 			}
